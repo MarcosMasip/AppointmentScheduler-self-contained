@@ -26,7 +26,148 @@ You can use the following credentials with live demo:
 
 This application is being described in [devoxify.com](https://devoxify.com/) blog. If you are interested in how this project was created, what issues were encoutered and how they were solved I highly encourage you to visit this blog.
 
-## Steps to Setup
+## Quickstart (cross‑platform) — run the app now
+
+Below are the exact commands to get the app running after cloning, for macOS, Windows, and Linux. Choose Option A for the fastest path (Docker only), or Option B to run the backend locally with Dockerized MySQL.
+
+Notes:
+- You need Docker Desktop (Windows/macOS) or Docker Engine (Linux). If your setup uses the legacy CLI, replace `docker compose` with `docker-compose`.
+- Default URL: http://localhost:8080
+- Seeded credentials: username `admin`, password `qwerty123`
+- If you’re on Apple silicon (M1/M2/M3) and see image/arch issues, set: `export DOCKER_DEFAULT_PLATFORM=linux/amd64`
+
+### Option A — All‑Docker (recommended)
+
+1) Clone and enter the repo
+```bash
+git clone https://github.com/MarcosMasip/AppointmentScheduler-self-contained.git
+cd AppointmentScheduler-self-contained
+```
+Expected outcome: The repository is cloned locally and your shell is in its folder.
+
+2) Start the stack
+```bash
+docker compose up -d
+```
+Expected outcome: Two containers start in the background:
+- MySQL 5.7 on port 3306 (executes `src/main/resources/appointmentscheduler.sql` on first boot)
+- Backend on port 8080 (connects to the DB via docker network)
+
+3) Check containers are healthy
+```bash
+docker compose ps
+```
+Expected outcome: Both `appointmentscheduler_db` and `backend` show “Up”, with ports `3306->3306` and `8080->8080`.
+
+4) Watch backend logs until it says it’s ready (optional)
+```bash
+docker compose logs -f backend
+```
+Expected outcome: Lines including “Tomcat started on port(s): 8080” and “Started AppointmentSchedulerApplication”. Press Ctrl+C to stop following logs.
+
+5) Open the app
+- macOS: `open http://localhost:8080`
+- Linux: `xdg-open http://localhost:8080`
+- Windows (PowerShell): `start http://localhost:8080`
+Expected outcome: Your browser shows the login page.
+
+6) Log in
+- Username: `admin`
+- Password: `qwerty123`
+Expected outcome: Successful login to the admin dashboard.
+
+Stop when finished:
+```bash
+docker compose down
+```
+Expected outcome: Containers are stopped and removed (the named volume persists unless removed explicitly).
+
+### Option B — Local backend + Dockerized MySQL
+
+1) Clone and enter the repo
+```bash
+git clone https://github.com/MarcosMasip/AppointmentScheduler-self-contained.git
+cd AppointmentScheduler-self-contained
+```
+Expected outcome: The repository is cloned locally and your shell is in its folder.
+
+2) Start MySQL 5.7 in Docker and auto‑init the schema
+```bash
+docker run --name appointmentscheduler-db \
+	-e MYSQL_DATABASE=appointmentscheduler \
+	-e MYSQL_USER=user \
+	-e MYSQL_PASSWORD=password \
+	-e MYSQL_ROOT_PASSWORD=root_pass \
+	-p 3306:3306 \
+	-v "$PWD/src/main/resources:/docker-entrypoint-initdb.d" \
+	-d mysql:5.7
+```
+Windows PowerShell: replace `$PWD` with `${PWD}` or the full path to the repo (e.g., `C:\path\to\repo`).
+
+Expected outcome: A MySQL container starts on localhost:3306 and executes `appointmentscheduler.sql` on first run to create tables and seed users (including the admin account).
+
+3) Wait for MySQL readiness (optional)
+```bash
+docker logs -f appointmentscheduler-db
+```
+Expected outcome: Log shows “ready for connections” and execution of the SQL from `/docker-entrypoint-initdb.d`. Press Ctrl+C to stop following logs.
+
+4) Run the Spring Boot app locally (Maven wrapper)
+```bash
+./mvnw -DskipTests spring-boot:run
+```
+Windows (PowerShell): `./mvnw.cmd -DskipTests spring-boot:run`
+
+Expected outcome: The backend downloads dependencies, then prints “Tomcat started on port(s): 8080” and “Started AppointmentSchedulerApplication”. Keep this terminal open.
+
+5) Open the app
+- macOS: `open http://localhost:8080`
+- Linux: `xdg-open http://localhost:8080`
+- Windows (PowerShell): `start http://localhost:8080`
+Expected outcome: Your browser shows the login page.
+
+6) Log in
+- Username: `admin`
+- Password: `qwerty123`
+Expected outcome: Successful login to the admin dashboard.
+
+Stop when finished:
+- Stop Spring Boot: Ctrl+C in the app terminal
+- Stop/remove MySQL container:
+```bash
+docker rm -f appointmentscheduler-db
+```
+Expected outcome: The container is removed. To keep data across runs, you can stop without removing (`docker stop appointmentscheduler-db`).
+
+### Troubleshooting
+- Port conflicts
+	- If port 3306 is busy, stop your local MySQL or change the published port in the `docker run`/compose file.
+	- If port 8080 is busy, you can run Spring Boot on a different port: `./mvnw -DskipTests -Dserver.port=8081 spring-boot:run`.
+- Apple silicon (M1/M2/M3)
+	- If you encounter image/arch errors, run: `export DOCKER_DEFAULT_PLATFORM=linux/amd64` then retry `docker compose up -d`.
+- Login shows “Invalid username or password”
+	- Ensure the backend can reach MySQL. With Docker Compose, this README config already points the backend to the DB service.
+	- Try an incognito window or clear cookies to avoid stale sessions.
+	- Reset admin password to the seeded hash (bcrypt for `qwerty123`):
+		```bash
+		docker exec -i appointmentscheduler-self-contained-appointmentscheduler_db-1 \
+			mysql -uuser -ppassword -e \
+			"UPDATE appointmentscheduler.users SET password='\$2a\$10\$EqKcp1WFKVQISheBxkQJoOqFbsWDzGJXRz/tjkGq85IZKJJ1IipYi' WHERE username='admin';"
+		```
+- Emails
+	- Email sending uses placeholders in `application.properties`. The app runs fine without a real SMTP server; actual email attempts will fail. To disable mailing locally, set `mailing.enabled=false`.
+
+### Credentials and URLs
+- App URL: http://localhost:8080 (login page at `/login`)
+- Seeded users:
+	- admin / qwerty123
+	- provider / qwerty123
+	- customer_r / qwerty123
+	- customer_c / qwerty123
+
+## Steps to Setup (original upstream notes)
+
+These are the original notes from the upstream project; the Quickstart above is the recommended, simplified path for this self-contained repository.
 
 **1. Clone the application**
 

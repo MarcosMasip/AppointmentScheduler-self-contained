@@ -31,8 +31,13 @@ public class CustomUserDetails implements UserDetails {
     }
 
     public static CustomUserDetails create(User user) {
-        List<GrantedAuthority> authorities =
-                user.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
+    // Be defensive: handle null/empty roles gracefully to avoid NPEs during authentication
+    List<GrantedAuthority> authorities =
+        (user.getRoles() == null ? java.util.Collections.<com.example.slabiak.appointmentscheduler.entity.user.Role>emptyList() : user.getRoles())
+            .stream()
+            .filter(java.util.Objects::nonNull)
+            .map(role -> new SimpleGrantedAuthority(role.getName()))
+            .collect(Collectors.toList());
 
         return new CustomUserDetails(
                 user.getId(),

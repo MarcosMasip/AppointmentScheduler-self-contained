@@ -45,11 +45,11 @@ cd AppointmentScheduler-self-contained
 ```
 Expected outcome: The repository is cloned locally and your shell is in its folder.
 
-2) Start the stack
+2) Start the stack (builds backend from this source)
 ```bash
 docker compose up -d
 ```
-Expected outcome: Two containers start in the background:
+Expected outcome: Compose builds the backend image from this repository, then two containers start in the background:
 - MySQL 5.7 on port 3306 (executes `src/main/resources/appointmentscheduler.sql` on first boot)
 - Backend on port 8080 (connects to the DB via docker network)
 
@@ -146,7 +146,7 @@ Expected outcome: The container is removed. To keep data across runs, you can st
 - Apple silicon (M1/M2/M3)
 	- If you encounter image/arch errors, run: `export DOCKER_DEFAULT_PLATFORM=linux/amd64` then retry `docker compose up -d`.
 - Login shows “Invalid username or password”
-	- Ensure the backend can reach MySQL. With Docker Compose, this README config already points the backend to the DB service.
+	- Ensure the backend can reach MySQL. With Docker Compose, the backend points to `appointmentscheduler_db` on the docker network. Wait until both services are Up and the backend logs show "Tomcat started".
 	- Try an incognito window or clear cookies to avoid stale sessions.
 	- Reset admin password to the seeded hash (bcrypt for `qwerty123`):
 		```bash
@@ -156,6 +156,10 @@ Expected outcome: The container is removed. To keep data across runs, you can st
 		```
 - Emails
 	- Email sending uses placeholders in `application.properties`. The app runs fine without a real SMTP server; actual email attempts will fail. To disable mailing locally, set `mailing.enabled=false`.
+
+### Registration and login
+- New registrations for both Retail and Corporate customers are supported at the login page links. After completing the form, you should be able to log in immediately with the chosen username and password.
+- If you still can’t log in with a newly created account, verify that the `users_roles` table has the appropriate roles and the `users.password` column contains a bcrypt hash (starts with `$2a$`). Compose builds the backend from this source and uses BCrypt for password encoding.
 
 ### Credentials and URLs
 - App URL: http://localhost:8080 (login page at `/login`)
